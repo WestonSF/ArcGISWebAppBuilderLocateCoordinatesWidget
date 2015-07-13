@@ -30,7 +30,7 @@ Based on the widget developed [here](https://geonet.esri.com/docs/DOC-3262)
 * [Blog](http://westonelli.wordpress.com)
 * [ArcGIS Blog](http://blogs.esri.com/esri/arcgis)
 * [ArcGIS API for Javascript](https://developers.arcgis.com/en/javascript)
-* [Web appBuilder for ArcGIS (Developer Edition](https://developers.arcgis.com/web-appbuilder)
+* [Web appBuilder for ArcGIS (Developer Edition)](https://developers.arcgis.com/web-appbuilder)
 
 
 ## Issues
