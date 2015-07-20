@@ -1,8 +1,9 @@
 {
-	"configText": "Just a test",
-	"AddressURL":"http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer",
-	"GridURL":"http://serverapps101.esri.com/arcgis/rest/services/MGRS/GeocodeServer",
-	"GeometryURL":"http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer",
-	"WKID":"2236",
-	"ZoomLvlconfig":"15"
+	"geometryServiceURL":"http://services.arcgisonline.co.nz/arcgis/rest/services/Utilities/Geometry/GeometryServer",
+	"addressLocatorServiceURL":"http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer",
+    "coordinateSystems": [
+      {"label":"NZTM", "wkid":"2193"},
+      {"label":"NZMG", "wkid":"27200"},
+      {"label":"WGS84", "wkid":"4326"}
+    ]
 }

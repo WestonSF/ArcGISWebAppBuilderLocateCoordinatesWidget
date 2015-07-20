@@ -1,27 +1,49 @@
-/* jimu-widget-coordinate-setting */
-.jimu-widget-location-setting{
+/* jimu-widget-locatecoordinates-setting */
+.jimu-widget-locatecoordinates-setting {
+  width: 100%;
+  height: 100%;
   margin:0;
   padding:0;
-  font-size:15px;
-}
-.jimu-widget-location-setting .dijitArrowButtonContainer{
-  width: 17px;
+  font-size: 14px;
+  color: #596679;
 }
 
-.jimu-widget-location-setting .setting-table > thead > tr > th,
-.jimu-widget-location-setting .setting-table > tbody > tr > td{
-  height:40px;
-  line-height:40px;
+.jimu-widget-locatecoordinates-setting .setting-table{
+  width: 100%;
+}
+
+.jimu-widget-locatecoordinates-setting {
+  font-size: 14px;
+}
+
+.jimu-widget-locatecoordinates-setting .setting-table > thead > tr > th,
+.jimu-widget-locatecoordinates-setting .setting-table > tbody > tr > td{
+  height:20px;
+  line-height:20px;
   vertical-align:middle;
 }
 
-.jimu-widget-location-setting .input-table > tbody > tr > .first{
+.jimu-widget-locatecoordinates-setting .setting-table > tbody > tr.example > td{
+  height:20px;
+  vertical-align:middle;
+}
+
+.jimu-widget-locatecoordinates-setting .input-table > tbody > tr > .first{
   width:auto;
   text-align: right;
   padding-right:15px;
   min-width: 200px;
 }
 
-.jimu-widget-location-setting .input-table > tbody > tr > .second{
+.jimu-widget-locatecoordinates-setting .input-table > tbody > tr > .second{
   width:650px;
 }
+
+.jimu-widget-locatecoordinates-setting .input-table > tbody > tr > .second .example {
+  font-style: italic;
+  font-size: 12px;
+  color: #a0acbf;
+  width: 100%;
+  display: inline-block;
+}
+

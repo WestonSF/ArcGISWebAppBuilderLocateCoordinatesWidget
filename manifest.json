@@ -1,10 +1,11 @@
 {
-  "name": "Location",
+  "name": "LocateCoordinates",
+  "label": "Locate Coordinates",
   "platform": "HTML",
-  "version": "1.1",
-  "wabVersion": "1.1",
-  "author": "Tim Witt",
-  "description": "This is a widget that can give you a location in various formats",
+  "version": "0.1",
+  "wabVersion": "1.2",
+  "author": "Shaun Weston",
+  "description": "Locate coordinates on a map.",
   "copyright": "2015",
   "properties": {  
 	"inPanel":true,  

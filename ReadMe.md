@@ -1,6 +1,5 @@
-# Location Widget for Web AppBuilder for ArcGIS
+# Locate Coordinates Widget for ArcGIS Web AppBuilder
 
-Based on the widget developed [here](https://geonet.esri.com/docs/DOC-3262)
 
 [Demo](http://)
 

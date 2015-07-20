@@ -1,9 +1,16 @@
 define([
     'dojo/_base/declare',
-    'jimu/BaseWidget',
     'dojo/dom',
     "dojo/on",
     'dojo/_base/lang',
+    'dojo/_base/html',
+    'dijit/_WidgetsInTemplateMixin',
+    'dijit/ProgressBar',
+    'jimu/BaseWidget',
+    'jimu/utils',
+    'jimu/SpatialReference/utils',
+    'jimu/dijit/SymbolChooser',
+    'jimu/dijit/TabContainer',
     "esri/symbols/SimpleMarkerSymbol",
     "esri/symbols/SimpleLineSymbol",
 	"esri/Color",
@@ -15,15 +22,20 @@ define([
 	"esri/geometry/webMercatorUtils",
     "esri/InfoTemplate",
     "esri/graphic",
-    'jimu/dijit/TabContainer',
-    'jimu/utils',
-    'jimu/SpatialReference/utils'],
+],
 function (
     declare,
-    BaseWidget,
     dom,
     on,
     lang,
+    html,
+    WidgetsInTemplateMixin,
+    ProgressBar,
+    BaseWidget,
+    utils,
+    Spatialutils,
+    SymbolChooser,
+    TabContainer,
     SimpleMarkerSymbol,
     SimpleLineSymbol,
     Color,
@@ -34,428 +46,263 @@ function (
     ProjectParameters,
     webMercatorUtils,
     InfoTemplate,
-    Graphic,
-    TabContainer,
-    utils,
-    Spatialutils) {
-
+    Graphic
+) {
+    
     var mapClick;
     // Base widget
-    return declare([BaseWidget], {
-
-        baseClass: 'jimu-widget-Location',
+    return declare([BaseWidget, WidgetsInTemplateMixin], {
+        baseClass: 'jimu-widget-locatecoordinates',
         tabContainer: null,
 
+        // EVENT FUNCTION - Creation of widget
         postCreate: function () {
+            console.log('Locate Coordinates widget created...');
             this.inherited(arguments);
-            console.log('postCreate');
-            this._initTabContainer();
-        },
 
-        // Startup function
-        startup: function () {
-            this.inherited(arguments);
-        },
-
-        _initTabContainer: function () {
+            // Setup tabs
             var tabs = [];
             tabs.push({
-                title: "Latitute/Longitute",
-                content: this.tabNode1
+                title: "Locate",
+                content: this.locateTab
             });
             tabs.push({
-                title: "USNG/MGRS",
-                content: this.tabNode2
+                title: "Symbology",
+                content: this.symbologyTab
             });
-            tabs.push({
-                title: "UTM",
-                content: this.tabNode3
-            });
-            this.selTab = "Lat/Long";
+            this.selTab = "Locate";
             this.tabContainer = new TabContainer({
                 tabs: tabs,
                 selected: this.selTab
-            }, this.tabLocation);
+            }, this.locateCoordinatesTab);
 
             this.tabContainer.startup();
             utils.setVerticalCenter(this.tabContainer.domNode);
+
+            // Load in coordinates to selection
+            var len = this.config.coordinateSystems.length;
+            for (var i = 0; i < len; i++) {
+                console.log();
+                var option = {
+                    value: this.config.coordinateSystems[i].wkid,
+                    label: this.config.coordinateSystems[i].label
+                };
+                this.coordSystemSelect.addOption(option);
+            }
         },
 
-        // Open function
-        onOpen: function () {
-            console.log('Widget opened...');
+        // EVENT FUNCTION - Startup widget
+        startup: function () {
+            console.log('Locate Coordinates widget started...');
+            this.inherited(arguments);
+
             var mapFrame = this;
             var map = this.map;
-            mapClick = map.on("click", clickLoc);
 
-            var Long, Lat, Latdegrees, Latminutes, Latseconds, projectPoint, Spat, myClickPoint;
-            var Longdegrees, Longminutes, Longseconds;
-            var degrees, minutes, seconds, m;
-            var LocPoint, graphic, NGfunction, point;
-            //Get Locator URL from settings
-            var locator = new Locator(this.config.AddressURL);
-            //Get Zoom level from settings
-            var ZoomIt = Number(this.config.ZoomLvlconfig);
-            //Get Grid URL from settings
-            var Gridlocator = new Locator(this.config.GridURL);
-            //Get WKID from settings
-            mapFrame.wkidDiv.value = Number(this.config.WKID);
-            //var ProjWKIDnum = Number(this.config.WKID);
-            //var ProjWKID = new SpatialReference(ProjWKIDnum);
-            var ProjWKIDnum, ProjWKID;
-            //Get Geometry URL from settings
-            var gsvc = new GeometryService(this.config.GeometryURL);
-            var gsvc2 = new GeometryService(this.config.GeometryURL);
-            var gsvc3 = new GeometryService(this.config.GeometryURL);
-            var infoTemplate = new InfoTemplate("Location", "Address: ${Address}");
-            var MyMapwkid = map.spatialReference.wkid;
+            // Setup labels
+            updateCoordinateLabels();
 
-            // Get coordinate system of the map - Geographic or projected 
-            function sniffWKID() {
-                console.log("Map spatial reference is " + map.spatialReference.wkid + "...");
-                if (map.spatialReference.wkid == "102100") {
-                    console.log("Good to go!");
-                } else {
-                    Spatialutils.loadResource();
-                    var WKTCurrent = Spatialutils.getCSStr(map.spatialReference.wkid);
+            // Get configurations
+            // Get geometry service URL from settings
+            var geometryService = new GeometryService(this.config.GeometryServiceURL);
+            var geometryLocatorService = new GeometryService(this.config.GeometryServiceURL);
+            // Get address locator URL from settings
+            var locatorService = new Locator(this.config.AddressLocatorServiceURL);          
+            locatorService.outSpatialReference = map.spatialReference;
+            // EVENT - Coordinate system change
+            on(this.coordSystemSelect, "change", updateCoordinateLabels);
+            // EVENT - Project completed
+            geometryService.on("project-complete", getPoint);
+            // EVENT - Location to address complete
+            locatorService.on("location-to-address-complete", goToPoint);
 
-                    function mapSpat() {
-                        if (WKTCurrent.charAt(0) == 'G') {
-                            Spat = "geo";
-                        } else {
-                            Spat = "proj";
-                        }
-                    };
-                    mapSpat();
+            // EVENT FUNCTION - Locate button click
+            on(this.locateButton, 'click', lang.hitch(this, function (evt) {
+                // Show loading bar
+                html.setStyle(mapFrame.progressBar.domNode, 'display', 'block');
+
+                // Close info window
+                map.infoWindow.hide();
+                // Clear existing graphics
+                map.graphics.clear();
+
+                // Project point to map if needed
+                if (this.coordSystemSelect.value != map.spatialReference.wkid) {
+                    // Get X and Y coordinates from text box
+                    xCoord = this.xCoordTextBox.value;
+                    yCoord = this.yCoordTextBox.value;
+                    // Create new point
+                    var inputPoint = new Point([xCoord, yCoord], new SpatialReference({ wkid: this.coordSystemSelect.value }));
+
+                    geometryService.project([inputPoint], map.spatialReference);
                 }
-            };
-            sniffWKID();
-
-            // Get the WKID from the widget
-            function currentWKID() {
-                ProjWKIDnum = Number(mapFrame.wkidDiv.value);
-                ProjWKID = new SpatialReference(ProjWKIDnum);
-            };
-
-
-            function clickLoc(evt) {
-                if (Spat == "proj") {
-                    console.log("Yup projected");
-                    var params2 = new ProjectParameters();
-                    //var GeoWKID = new SpatialReference(MyMapwkid);
-                    params2.geometries = [evt.mapPoint];
-                    params2.outSR = new SpatialReference(102100);
-                    gsvc3.project(params2, function (evt2) {
-                        LocPoint = evt2[0];
-                        //myClickPoint = LocPoint;
-                        map.graphics.clear();
-                        map.infoWindow.hide();
-                        var mySpatial = new SpatialReference(4326);
-                        locator.locationToAddress(webMercatorUtils.webMercatorToGeographic(LocPoint), 100);
-                        Gridlocator.locationToAddress(webMercatorUtils.webMercatorToGeographic(LocPoint), 100);
-                        LocPoint = webMercatorUtils.webMercatorToGeographic(LocPoint);
-                        currentWKID();
-                        gsvc.project([LocPoint], ProjWKID);
-                        mapFrame.LatTextBox.value = LocPoint.y;
-                        mapFrame.LongTextBox.value = LocPoint.x;
-                        Lat = LocPoint.y;
-                        Long = LocPoint.x;
-                        DMSLat();
-                        DMSLong();
-                    });
-                } else {
-                    LocPoint = evt.mapPoint;
-                    map.graphics.clear();
-                    map.infoWindow.hide();
-                    var mySpatial = new SpatialReference(4326);
-                    locator.locationToAddress(webMercatorUtils.webMercatorToGeographic(LocPoint), 100);
-                    Gridlocator.locationToAddress(webMercatorUtils.webMercatorToGeographic(LocPoint), 100);
-                    LocPoint = webMercatorUtils.webMercatorToGeographic(LocPoint);
-                    currentWKID();
-                    gsvc.project([LocPoint], ProjWKID);
-                    mapFrame.LatTextBox.value = LocPoint.y;
-                    mapFrame.LongTextBox.value = LocPoint.x;
-                    Lat = LocPoint.y;
-                    Long = LocPoint.x;
-                    DMSLat();
-                    DMSLong();
+                // Coordinate system is same as map
+                else {
+                    getPoint();
                 }
 
 
-            };
-            gsvc.on("project-complete", projectComplete);
-            function projectComplete(evt) {
-                if (evt.geometries[0].spatialReference.wkid == 4326) {
-                    LocPoint = evt.geometries[0];
-                    locator.locationToAddress(LocPoint, 100);
-                    Lat = LocPoint.y;
-                    Long = LocPoint.x;
-                    Gridlocator.locationToAddress(LocPoint, 100);
-                    DMSLat();
-                    DMSLong();
-                    mapFrame.LatTextBox.value = Lat;
-                    mapFrame.LongTextBox.value = Long;
-                    map.graphics.clear();
-                } else {
-                    projectPoint = evt.geometries[0];
-                    mapFrame.ProjXBox.value = projectPoint.x;
-                    mapFrame.ProjYBox.value = projectPoint.y;
-                    console.log("break");
-                }
-            }
+            }));
 
-            locator.on("location-to-address-complete", locateMe);
-            locator.on("error", function (evt) {
-                if (Spat == "geo") {
-                    graphic = new Graphic(LocPoint, symbol);
-                    map.graphics.add(graphic);
-                    map.infoWindow.resize(200, 100);
-                    map.infoWindow.setTitle("Result");
-                    map.infoWindow.setContent("No Address has been found");
-                    map.infoWindow.show(LocPoint, map.getInfoWindowAnchor(LocPoint));
-                    map.centerAndZoom(LocPoint, ZoomIt);
-                } else {
-                    var ProjSR = new SpatialReference(MyMapwkid);
+
+
+            // EVENT FUNCTION - Get the point    
+            function getPoint(evt) {
+                // Get the point
+                if (evt) {
+                    // Get the projected point
+                    point = evt.geometries[0];
+                }
+                else {
+                    // Get X and Y coordinates from text box
+                    xCoord = mapFrame.xCoordTextBox.value;
+                    yCoord = mapFrame.yCoordTextBox.value;
+                    point = new Point([xCoord, yCoord], new SpatialReference({ wkid: mapFrame.coordSystemSelect.value }));
+                }
+
+                // If address locator provided
+                if (locatorService) {
                     var params = new ProjectParameters();
-                    params.geometries = [LocPoint];
-                    params.outSR = ProjSR;
-                    gsvc2.project(params, function (projectedPoints) {
-                        zoomPoint = projectedPoints[0];
-                        graphic = new Graphic(zoomPoint, symbol);
-                        map.graphics.add(graphic);
-                        map.infoWindow.resize(200, 100);
-                        map.infoWindow.setTitle("Result");
-                        map.infoWindow.setContent("No Address has been found");
-                        map.infoWindow.show(zoomPoint, map.getInfoWindowAnchor(zoomPoint));
-                        map.centerAndZoom(zoomPoint, ZoomIt);
-                    });
+                    params.geometries = [point];
+                    // Locate addresses within specified metres
+                    locatorService.locationToAddress(point, 100);
                 }
-
-            });
-
-            function locateMe(evt) {
-                if (evt.address.address) {
-                    var address = evt.address.address;
-                    if (Spat == "geo") {
-                        LocPoint = webMercatorUtils.geographicToWebMercator(evt.address.location);
-                        graphic = new Graphic(LocPoint, symbol, address, infoTemplate);
-                        map.graphics.add(graphic);
-                        map.infoWindow.setTitle("Result");
-                        map.infoWindow.setContent("<b>Address:</b> " + evt.address.address.Address + "<br></br>" + "<b>City:</b> " + evt.address.address.City + "<br></br>" +
-                        "<b>Country:</b> " + evt.address.address.CountryCode);
-                        map.infoWindow.resize(250, 100);
-                        map.infoWindow.show(LocPoint, map.getInfoWindowAnchor(LocPoint));
-                        map.centerAndZoom(LocPoint, ZoomIt);
-                    } else {
-                        LocPoint = evt.address.location;
-                        var ProjSR = new SpatialReference(MyMapwkid);
-                        var params = new ProjectParameters();
-                        params.geometries = [LocPoint];
-                        params.outSR = ProjSR;
-                        gsvc2.project(params, function (projectedPoints) {
-                            zoomPoint = projectedPoints[0];
-                            graphic = new Graphic(zoomPoint, symbol, address, infoTemplate);
-                            map.graphics.add(graphic);
-                            map.infoWindow.setTitle("Result");
-                            map.infoWindow.setContent("<b>Address:</b> " + evt.address.address.Address + "<br></br>" + "<b>City:</b> " + evt.address.address.City + "<br></br>" +
-                            "<b>Country:</b> " + evt.address.address.CountryCode);
-                            map.infoWindow.resize(250, 100);
-                            map.infoWindow.show(zoomPoint, map.getInfoWindowAnchor(LocPoint));
-                            map.centerAndZoom(zoomPoint, ZoomIt);
-                        })
-                    }
-
+                else {
+                    goToPoint(point);
                 }
-            };
-            Gridlocator.on("address-to-locations-complete", locateMeGridAddress);
-
-            function locateMeGridAddress(evt) {
-                FoundPointAr = evt.addresses;
-                FoundPoint = FoundPointAr[0];
-                LocPoint = FoundPoint.location;
-                currentWKID();
-                gsvc.project([LocPoint], ProjWKID);
-                locator.locationToAddress(LocPoint, 100);
-                Lat = LocPoint.y;
-                Long = LocPoint.x;
-                DMSLat();
-                DMSLong();
-                mapFrame.LatTextBox.value = Lat;
-                mapFrame.LongTextBox.value = Long;
-                map.graphics.clear();
             }
-            var symbol = new SimpleMarkerSymbol(
-            SimpleMarkerSymbol.STYLE_CIRCLE, 15,
-              new SimpleLineSymbol(
-                SimpleLineSymbol.STYLE_SOLID,
-                new Color([0, 0, 255, 0.5]), 8),
-              new Color([0, 0, 255])
-            );
 
-            // Clear button click event
-            on(this.clear, 'click', lang.hitch(this, function (evt) {
-                console.log("It is clear!");
-                mapFrame.LatMinTextBox.value = "";
-                mapFrame.LatDegTextBox.value = "";
-                mapFrame.LatSecTextBox.value = "";
-                mapFrame.LongMinTextBox.value = "";
-                mapFrame.LongDegTextBox.value = ""
-                mapFrame.LongSecTextBox.value = "";
-                mapFrame.LatTextBox.value = "";
-                mapFrame.LongTextBox.value = "";
-                mapFrame.GridTextBox.value = "";
-
-            }));
-
-            // Lat/Long button click event
-            on(this.latlong, 'click', lang.hitch(this, function (evt) {
+            // EVENT FUNCTION - Clear button click
+            on(this.clearButton, 'click', lang.hitch(this, function (evt) {
+                // Close info window
+                map.infoWindow.hide();
+                // Clear existing graphics
                 map.graphics.clear();
-                Lat = this.LatTextBox.value;
-                Long = this.LongTextBox.value;
-                LocPoint = new Point([Long, Lat]);
-                currentWKID();
-                gsvc.project([LocPoint], ProjWKID);
-                locator.locationToAddress(LocPoint, 100);
-                Gridlocator.locationToAddress(LocPoint, 100);
-                DMSLat();
-                DMSLong();
+                mapFrame.xCoordTextBox.set('value', '');
+                mapFrame.yCoordTextBox.set('value', '');
             }));
 
-            // Degrees Minutes Seconds button click event
-            on(this.dms, 'click', lang.hitch(this, function (evt) {
-                console.log("It is dms!");
-                Latdegrees = mapFrame.LatDegTextBox.value;
-                Latminutes = mapFrame.LatMinTextBox.value;
-                Latseconds = mapFrame.LatSecTextBox.value;
-                LatDMS();
-                Longdegrees = mapFrame.LongDegTextBox.value;
-                Longminutes = mapFrame.LongMinTextBox.value;
-                Longseconds = mapFrame.LongSecTextBox.value;
-                LongDMS();
-                LocPoint = new Point([Long, Lat]);
-                currentWKID();
-                gsvc.project([LocPoint], ProjWKID);
-                locator.locationToAddress(LocPoint, 100);
-                Gridlocator.locationToAddress(LocPoint, 100);
-                mapFrame.LongTextBox.value = Long;
-                mapFrame.LatTextBox.value = Lat;
-                map.graphics.clear();
-
-            }));
-
-            // Use USNG/MGRS box to get address
-            on(this.grid, 'click', lang.hitch(this, function (evt) {
-                GridPoint = mapFrame.GridTextBox.value;
-                var gridnmb = { MGRS: GridPoint };
-                Gridlocator.addressToLocations(gridnmb);
-                map.graphics.clear();
-            }));
-            Gridlocator.on("location-to-address-complete", locateMeGrid);
-            function locateMeGrid(evt) {
-                mapFrame.GridTextBox.value = evt.address.address.MGRS;
-            };
-
-            // Use project button to get address
-            on(this.proj, 'click', lang.hitch(this, function (evt) {
-                var projPointX = mapFrame.ProjXBox.value;
-                var projPointY = mapFrame.ProjYBox.value;
-                //currentWKID();
-                var projPoint = new Point(projPointX, projPointY, new SpatialReference({ wkid: Number(mapFrame.wkidDiv.value) }));
-                var LatOutSR = new SpatialReference(4326);
-                //var projParams = new ProjectParameters();
-                //projParams.geometries = projPoint;
-                //projParams.outSR = LatOutSR;
-
-                gsvc.project([projPoint], LatOutSR);
-
-
-            }));
-
-            // Transform Decimal Degrees into Degrees Minutes Seconds
-            function DMSLat() {
-                if (Lat > 0) {
-                    Latdegrees = Math.floor(Lat);
-                    m = (Lat - Latdegrees) * 60;
-                    Latminutes = Math.floor(m);
-                    Latseconds = (m - Latminutes) * 60;
-                } else {
-                    Latdegrees = Math.ceil(Lat);
-                    m = Math.abs((Lat - Latdegrees) * 60);
-                    Latminutes = Math.floor(m);
-                    Latseconds = (m - Latminutes) * 60;
-                }
-                mapFrame.LatMinTextBox.value = Latminutes;
-                mapFrame.LatDegTextBox.value = Latdegrees;
-                mapFrame.LatSecTextBox.value = Latseconds;
-            };
-
-            function DMSLong() {
-                if (Long > 0) {
-                    Longdegrees = Math.floor(Long);
-                    m = (Long - Longdegrees) * 60;
-                    Longminutes = Math.floor(m);
-                    Longseconds = (m - Longminutes) * 60;
-                } else {
-                    Longdegrees = Math.ceil(Long);
-                    m = Math.abs((Long - Longdegrees) * 60);
-                    Longminutes = Math.floor(m);
-                    Longseconds = (m - Longminutes) * 60;
-                }
-                mapFrame.LongMinTextBox.value = Longminutes;
-                mapFrame.LongDegTextBox.value = Longdegrees;
-                mapFrame.LongSecTextBox.value = Longseconds;
-
-            };
-
-            // Transform Degrees Minutes Seconds into Decimal Degrees
-            function LatDMS() {
-                if (Latdegrees > 0) {
-                    Lat = (Number(Latdegrees) + ((Latminutes / 60.0) + (Latseconds / 3600.0)));
-                } else {
-                    Lat = (Number(Latdegrees) - ((Latminutes / 60.0) + (Latseconds / 3600.0)));
-                }
-            };
-
-            function LongDMS() {
-                if (Longdegrees > 0) {
-                    Long = (Number(Longdegrees) + ((Longminutes / 60.0) + (Longseconds / 3600.0)));
-                } else {
-                    Long = (Number(Longdegrees) - ((Longminutes / 60.0) + (Longseconds / 3600.0)));
-                }
-            };
-
-            // When the popup is closed remove the graphic
+            // EVENT FUNCTION - Popup window closed
             map.infoWindow.on("hide", function () {
-                map.graphics.clear();
+
             });
 
+            // FUNCTION - Go to the point
+            function goToPoint(evt) {
+                var content = "<b>X: " + (Math.round(point.x * 100) / 100) + "<br/>" + "Y: " + (Math.round(point.y * 100) / 100) + "</b>";
+                // If address locator provided
+                if (locatorService) {
+                    var address = evt.address.address.Match_addr;
+                    content += "<br/><br/>Closest address to this point: " + address;
+                }
+
+                // Add point to map
+                var symbol = mapFrame.pointSymbolChooser.getSymbol();
+                var graphic = new Graphic(point, symbol);
+                map.graphics.add(graphic);
+
+                // Zoom to point
+                zoomExtent = map.extent.centerAt(point).expand(0.01);
+                map.setExtent(zoomExtent);
+                // Show popup
+                map.infoWindow.setTitle("Location");
+                map.infoWindow.setContent(content);
+                map.infoWindow.show(point);
+
+                // Hide loading bar
+                html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
+            };
+
+            // FUNCTION - Update coordinates labels
+            function updateCoordinateLabels() {
+                // Get coordinate system type selected
+                Spatialutils.loadResource();
+                var WKTCurrent = Spatialutils.getCSStr(mapFrame.coordSystemSelect.value);
+                // If geographic
+                if (WKTCurrent.charAt(0) == 'G') {
+                    // Update labels
+                    dojo.byId("xCoordLabel").innerHTML = "Longitude (X):";
+                    dojo.byId("yCoordLabel").innerHTML = "Latitude (Y):";
+                    // If projected
+                } else {
+                    // Update labels
+                    dojo.byId("xCoordLabel").innerHTML = "Easting (X):";
+                    dojo.byId("yCoordLabel").innerHTML = "Northing (Y):";
+                }
+            }
+
+            // EVENT FUNCTION - Project error
+            geometryService.on("error", function (evt) {
+                console.error(evt.error.message);
+
+                // Hide loading bar
+                html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
+            });
+            geometryLocatorService.on("error", function (evt) {
+                console.error(evt.error.message);
+
+                // Hide loading bar
+                html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
+            });
+
+            // EVENT FUNCTION - Locator error
+            locatorService.on("error", function (evt) {
+                var content = "<b>X: " + (Math.round(point.x * 100) / 100) + "<br/>" + "Y: " + (Math.round(point.y * 100) / 100) + "</b>";
+                // If address locator provided
+                if (locatorService) {
+                    content += "<br/><br/>No Address found";
+                }
+
+                // Add point to map
+                var symbol = mapFrame.pointSymbolChooser.getSymbol();
+                var graphic = new Graphic(point, symbol);
+                map.graphics.add(graphic);
+
+                // Zoom to point
+                zoomExtent = map.extent.centerAt(point).expand(0.01);
+                map.setExtent(zoomExtent);
+                // Show popup
+                map.infoWindow.setTitle("Location");
+                map.infoWindow.setContent(content);
+                map.infoWindow.show(point);
+
+                // Hide loading bar
+                html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
+            });
         },
 
-        // Close function
+        // EVENT FUNCTION - Open widget
+        onOpen: function () {
+            console.log('Locate Coordinates widget opened...');
+            this.inherited(arguments);
+        },
+
+        // EVENT FUNCTION - Close widget
         onClose: function () {
-            console.log('Widget closed...');
-            var test = this;
-            mapClick.remove();
-
+            console.log('Locate Coordinates widget closed...');
+            // Close info window
+            this.map.infoWindow.hide();
         },
 
-        // Minimise function
+        // EVENT FUNCTION - Minimise widget
         onMinimize: function () {
             console.log('onMinimize');
+            // Close info window
+            this.map.infoWindow.hide();
         },
 
-        // Maximise function
+        // EVENT FUNCTION - Maximise widget
         onMaximize: function () {
             console.log('onMaximize');
         },
 
-        // Sign in function
+        // EVENT FUNCTION - Sign in widget
         onSignIn: function (credential) {
             /* jshint unused:false*/
             console.log('onSignIn');
         },
 
-        // Sign out function
+        // EVENT FUNCTION - Sign out widget
         onSignOut: function () {
             console.log('onSignOut');
         }
