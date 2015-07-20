@@ -6,7 +6,8 @@
 
 ## Features
 
-* Locate a point
+* Locate a point - Projects from different coordinate systems
+* Reverse geocode to closest address
 
 
 ## Requirements

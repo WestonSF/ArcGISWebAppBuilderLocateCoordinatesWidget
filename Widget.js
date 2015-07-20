@@ -1,16 +1,33 @@
+///////////////////////////////////////////////////////////////////////////
+// Copyright © 2014 Esri. All Rights Reserved.
+//
+// Licensed under the Apache License Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+///////////////////////////////////////////////////////////////////////////
+
 define([
-    'dojo/_base/declare',
-    'dojo/dom',
-    "dojo/on",
-    'dojo/_base/lang',
+    "dojo/_base/declare",
+    "dojo/dom",
+    'dojo/dom-style',
     'dojo/_base/html',
-    'dijit/_WidgetsInTemplateMixin',
-    'dijit/ProgressBar',
-    'jimu/BaseWidget',
-    'jimu/utils',
-    'jimu/SpatialReference/utils',
-    'jimu/dijit/SymbolChooser',
-    'jimu/dijit/TabContainer',
+    "dojo/on",
+    "dojo/_base/lang",
+    "dijit/_WidgetsInTemplateMixin",
+    "dijit/ProgressBar",
+    "jimu/BaseWidget",
+    "jimu/utils",
+    "jimu/SpatialReference/utils",
+    "jimu/dijit/SymbolChooser",
+    "jimu/dijit/TabContainer",
     "esri/symbols/SimpleMarkerSymbol",
     "esri/symbols/SimpleLineSymbol",
 	"esri/Color",
@@ -26,9 +43,10 @@ define([
 function (
     declare,
     dom,
+    domStyle,
+    html,
     on,
     lang,
-    html,
     WidgetsInTemplateMixin,
     ProgressBar,
     BaseWidget,
@@ -48,8 +66,6 @@ function (
     InfoTemplate,
     Graphic
 ) {
-    
-    var mapClick;
     // Base widget
     return declare([BaseWidget, WidgetsInTemplateMixin], {
         baseClass: 'jimu-widget-locatecoordinates',
@@ -63,14 +79,14 @@ function (
             // Setup tabs
             var tabs = [];
             tabs.push({
-                title: "Locate",
+                title: this.nls.locate,
                 content: this.locateTab
             });
             tabs.push({
-                title: "Symbology",
+                title: this.nls.symbology,
                 content: this.symbologyTab
             });
-            this.selTab = "Locate";
+            this.selTab = this.nls.locate;
             this.tabContainer = new TabContainer({
                 tabs: tabs,
                 selected: this.selTab
@@ -93,21 +109,21 @@ function (
 
         // EVENT FUNCTION - Startup widget
         startup: function () {
+            //this.xCoordTextBox.set('value', '1763677.09');
+            //this.yCoordTextBox.set('value', '5430247.99');
+
             console.log('Locate Coordinates widget started...');
             this.inherited(arguments);
 
             var mapFrame = this;
             var map = this.map;
 
-            // Setup labels
-            updateCoordinateLabels();
-
             // Get configurations
             // Get geometry service URL from settings
-            var geometryService = new GeometryService(this.config.GeometryServiceURL);
-            var geometryLocatorService = new GeometryService(this.config.GeometryServiceURL);
+            var geometryService = new GeometryService(this.config.geometryServiceURL);
+            var geometryLocatorService = new GeometryService(this.config.geometryServiceURL);
             // Get address locator URL from settings
-            var locatorService = new Locator(this.config.AddressLocatorServiceURL);          
+            var locatorService = new Locator(this.config.addressLocatorServiceURL);          
             locatorService.outSpatialReference = map.spatialReference;
             // EVENT - Coordinate system change
             on(this.coordSystemSelect, "change", updateCoordinateLabels);
@@ -116,35 +132,53 @@ function (
             // EVENT - Location to address complete
             locatorService.on("location-to-address-complete", goToPoint);
 
+            // Setup labels
+            updateCoordinateLabels();   
+
             // EVENT FUNCTION - Locate button click
             on(this.locateButton, 'click', lang.hitch(this, function (evt) {
-                // Show loading bar
-                html.setStyle(mapFrame.progressBar.domNode, 'display', 'block');
+                // Hide error message
+                domStyle.set(mapFrame.errorText, 'display', 'none');
+                mapFrame.errorText.innerHTML = "";
 
                 // Close info window
                 map.infoWindow.hide();
                 // Clear existing graphics
                 map.graphics.clear();
 
-                // Project point to map if needed
-                if (this.coordSystemSelect.value != map.spatialReference.wkid) {
-                    // Get X and Y coordinates from text box
-                    xCoord = this.xCoordTextBox.value;
-                    yCoord = this.yCoordTextBox.value;
-                    // Create new point
-                    var inputPoint = new Point([xCoord, yCoord], new SpatialReference({ wkid: this.coordSystemSelect.value }));
+                // Get X and Y coordinates from text box
+                xCoord = mapFrame.xCoordTextBox.get('value');
+                yCoord = mapFrame.yCoordTextBox.get('value');
 
-                    geometryService.project([inputPoint], map.spatialReference);
+                // If valid input
+                if ((xCoord) && (yCoord)) {
+                    // Show loading bar
+                    html.setStyle(mapFrame.progressBar.domNode, "display", "block");
+
+                    // Close info window
+                    map.infoWindow.hide();
+                    // Clear existing graphics
+                    map.graphics.clear();
+
+                    // Project point to map if needed
+                    if (mapFrame.coordSystemSelect.value != map.spatialReference.wkid) {
+                        // Create new point
+                        var inputPoint = new Point([xCoord, yCoord], new SpatialReference({ wkid: this.coordSystemSelect.value }));
+
+                        geometryService.project([inputPoint], map.spatialReference);
+                    }
+                        // Coordinate system is same as map
+                    else {
+                        getPoint();
+                    }
                 }
-                // Coordinate system is same as map
+                // Non valid input
                 else {
-                    getPoint();
+                    // Show error message
+                    domStyle.set(mapFrame.errorText, 'display', 'block');
+                    mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
                 }
-
-
             }));
-
-
 
             // EVENT FUNCTION - Get the point    
             function getPoint(evt) {
@@ -155,8 +189,8 @@ function (
                 }
                 else {
                     // Get X and Y coordinates from text box
-                    xCoord = mapFrame.xCoordTextBox.value;
-                    yCoord = mapFrame.yCoordTextBox.value;
+                    xCoord = mapFrame.xCoordTextBox.get('value');
+                    yCoord = mapFrame.yCoordTextBox.get('value');
                     point = new Point([xCoord, yCoord], new SpatialReference({ wkid: mapFrame.coordSystemSelect.value }));
                 }
 
@@ -174,6 +208,10 @@ function (
 
             // EVENT FUNCTION - Clear button click
             on(this.clearButton, 'click', lang.hitch(this, function (evt) {
+                // Hide error message
+                domStyle.set(mapFrame.errorText, 'display', 'none');
+                mapFrame.errorText.innerHTML = "";
+
                 // Close info window
                 map.infoWindow.hide();
                 // Clear existing graphics
@@ -182,18 +220,13 @@ function (
                 mapFrame.yCoordTextBox.set('value', '');
             }));
 
-            // EVENT FUNCTION - Popup window closed
-            map.infoWindow.on("hide", function () {
-
-            });
-
             // FUNCTION - Go to the point
             function goToPoint(evt) {
                 var content = "<b>X: " + (Math.round(point.x * 100) / 100) + "<br/>" + "Y: " + (Math.round(point.y * 100) / 100) + "</b>";
                 // If address locator provided
                 if (locatorService) {
                     var address = evt.address.address.Match_addr;
-                    content += "<br/><br/>Closest address to this point: " + address;
+                    content += "<br/><br/>" + mapFrame.nls.closestAddress + ": " + address;
                 }
 
                 // Add point to map
@@ -205,7 +238,7 @@ function (
                 zoomExtent = map.extent.centerAt(point).expand(0.01);
                 map.setExtent(zoomExtent);
                 // Show popup
-                map.infoWindow.setTitle("Location");
+                map.infoWindow.setTitle(mapFrame.nls.location);
                 map.infoWindow.setContent(content);
                 map.infoWindow.show(point);
 
@@ -218,29 +251,41 @@ function (
                 // Get coordinate system type selected
                 Spatialutils.loadResource();
                 var WKTCurrent = Spatialutils.getCSStr(mapFrame.coordSystemSelect.value);
-                // If geographic
-                if (WKTCurrent.charAt(0) == 'G') {
-                    // Update labels
-                    dojo.byId("xCoordLabel").innerHTML = "Longitude (X):";
-                    dojo.byId("yCoordLabel").innerHTML = "Latitude (Y):";
-                    // If projected
-                } else {
-                    // Update labels
-                    dojo.byId("xCoordLabel").innerHTML = "Easting (X):";
-                    dojo.byId("yCoordLabel").innerHTML = "Northing (Y):";
+                // If WKT returned
+                if (WKTCurrent) {
+                    // If geographic
+                    if (WKTCurrent.charAt(0) == 'G') {
+                        // Update labels
+                        mapFrame.xCoordLabel.innerHTML = mapFrame.nls.geographicXLabel;
+                        mapFrame.yCoordLabel.innerHTML = mapFrame.nls.geographicYLabel;
+                        // If projected
+                    } else {
+                        // Update labels
+                        mapFrame.xCoordLabel.innerHTML = mapFrame.nls.projectedXLabel;
+                        mapFrame.yCoordLabel.innerHTML = mapFrame.nls.projectedYLabel;
+                    }
                 }
+                // Otherwise generic labels
+                else {
+                    // Update labels
+                    mapFrame.xCoordLabel.innerHTML = "X";
+                    mapFrame.yCoordLabel.innerHTML = "Y";
+                }
+
             }
 
             // EVENT FUNCTION - Project error
             geometryService.on("error", function (evt) {
-                console.error(evt.error.message);
-
+                // Show error message
+                domStyle.set(mapFrame.errorText, 'display', 'block');
+                mapFrame.errorText.innerHTML = evt.error.message;
                 // Hide loading bar
                 html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
             });
             geometryLocatorService.on("error", function (evt) {
-                console.error(evt.error.message);
-
+                // Show error message
+                domStyle.set(mapFrame.errorText, 'display', 'block');
+                mapFrame.errorText.innerHTML = evt.error.message;
                 // Hide loading bar
                 html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
             });
@@ -250,7 +295,7 @@ function (
                 var content = "<b>X: " + (Math.round(point.x * 100) / 100) + "<br/>" + "Y: " + (Math.round(point.y * 100) / 100) + "</b>";
                 // If address locator provided
                 if (locatorService) {
-                    content += "<br/><br/>No Address found";
+                    content += "<br/><br/>" + mapFrame.nls.noAddress;
                 }
 
                 // Add point to map
@@ -262,7 +307,7 @@ function (
                 zoomExtent = map.extent.centerAt(point).expand(0.01);
                 map.setExtent(zoomExtent);
                 // Show popup
-                map.infoWindow.setTitle("Location");
+                map.infoWindow.setTitle(mapFrame.nls.location);
                 map.infoWindow.setContent(content);
                 map.infoWindow.show(point);
 
@@ -286,25 +331,9 @@ function (
 
         // EVENT FUNCTION - Minimise widget
         onMinimize: function () {
-            console.log('onMinimize');
+            console.log('Locate Coordinates widget minimised...');
             // Close info window
             this.map.infoWindow.hide();
-        },
-
-        // EVENT FUNCTION - Maximise widget
-        onMaximize: function () {
-            console.log('onMaximize');
-        },
-
-        // EVENT FUNCTION - Sign in widget
-        onSignIn: function (credential) {
-            /* jshint unused:false*/
-            console.log('onSignIn');
-        },
-
-        // EVENT FUNCTION - Sign out widget
-        onSignOut: function () {
-            console.log('onSignOut');
         }
     });
 });

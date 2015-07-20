@@ -115,13 +115,13 @@ define([
 
         var fields = [{
             name: 'label',
-            title: 'Coordinate System',
+            title: this.nls.coordinateSystem,
             type: 'text',
             unique: true,
             editable: false
         }, {
             name: 'wkid',
-            title: 'Spatial Reference',
+            title: this.nls.spatialReference,
             type: 'text',
             unique: true,
             editable: false

@@ -1,24 +1,31 @@
 <div>   
     <div data-dojo-attach-point="locateCoordinatesTab">
-        <div class="identify-tab-node" data-dojo-attach-point="locateTab">
-            <br></br>
-	        <label id="xCoordLabel"></label>        
-            <input id="xCoordTextBox" data-dojo-attach-point="xCoordTextBox" data-dojo-type="dijit/form/TextBox" value="2660514.1"></input>
-	        <br></br>
-	        <label id="yCoordLabel"></label>	
-            <input id="yCoordTextBox" data-dojo-attach-point="yCoordTextBox" data-dojo-type="dijit/form/TextBox" value="5988542.3"></input>
-	        <br></br>
-            <label for="coordSystemLabel">Coordinate System:</label>	
-            <select id="coordSystemSelect" data-dojo-attach-point="coordSystemSelect" data-dojo-type="dijit/form/Select"></select>
-	        <br></br>
-	        <button id="locateButton" data-dojo-attach-point="locateButton" data-dojo-type="dijit/form/Button" type="button">Locate</button> 
-	        <button id="clearButton" data-dojo-attach-point="clearButton" data-dojo-type="dijit/form/Button" type="button">Clear</button> 
-            </br>
+        <div data-dojo-attach-point="locateTab">
+            <br /><br />
+            <table class="locatecoordinates-table input-table" cellspacing="0">
+                <tbody>
+		            <tr>
+	                <td class="first"><label data-dojo-attach-point="xCoordLabel"></label></td>        
+                    <td class="second"><input data-dojo-attach-point="xCoordTextBox" data-dojo-type="dijit/form/NumberTextBox" required="true" data-dojo-props="constraints:{pattern:'0.##########'}"/></td>
+		            </tr>
+		            <tr>
+	                <td class="first"><label data-dojo-attach-point="yCoordLabel"></label></td>	
+                    <td class="second"><input data-dojo-attach-point="yCoordTextBox" data-dojo-type="dijit/form/NumberTextBox" required="true" data-dojo-props="constraints:{pattern:'0.##########'}"/></td>
+		            </tr>
+		            <tr>
+                    <td class="first"><label data-dojo-attach-point="coordSystemLabel">${nls.coordinateSystem}:</label></td>	
+                    <td class="second"><select data-dojo-attach-point="coordSystemSelect" data-dojo-type="dijit/form/Select"></select></td>
+		            </tr>
+                </tbody>
+            </table>
+	        <button data-dojo-attach-point="locateButton" data-dojo-type="dijit/form/Button" type="button">${nls.locate}</button> 
+	        <button data-dojo-attach-point="clearButton" data-dojo-type="dijit/form/Button" type="button">${nls.clear}</button> 
+            <br /><br />
             <div data-dojo-attach-point="progressBar" data-dojo-type="dijit/ProgressBar" data-dojo-props="value:Infinity,label:'Loading'" style="display:none;"></div>
-            <div data-dojo-attach-point="infoText" class="text"></div>
+            <div data-dojo-attach-point="errorText" class="errorMessage"></div>
         </div>
         <div class="identify-tab-node" data-dojo-attach-point="symbologyTab">
-            <br></br>
+            <br /><br />
             <div data-dojo-attach-point="pointSymbolChooser" data-dojo-type="jimu/dijit/SymbolChooser" data-dojo-props='type:"marker"'></div>
         </div>
     </div>

@@ -30,9 +30,9 @@
 
 .jimu-widget-locatecoordinates-setting .input-table > tbody > tr > .first{
   width:auto;
-  text-align: right;
+  text-align: left;
   padding-right:15px;
-  min-width: 200px;
+  min-width: 150px;
 }
 
 .jimu-widget-locatecoordinates-setting .input-table > tbody > tr > .second{
