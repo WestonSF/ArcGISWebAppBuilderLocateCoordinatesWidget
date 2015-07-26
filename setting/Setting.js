@@ -54,6 +54,7 @@ define([
       startup: function () {
         console.log('Configure locate coordinates widget started...');
         this.inherited(arguments);
+
           // Set the default configuration parameters from the config file
         this.setConfig(this.config);
         // Set loading image
@@ -104,7 +105,9 @@ define([
       },
 
       // FUNCTION - Set the default configuration parameters in the configure widget from the config file
-      setConfig: function(config) {
+      setConfig: function (config) {
+        var mapFrame = this;
+
         this.config = config;
 
         // Set the geometry service URL
@@ -113,17 +116,19 @@ define([
         // Set the address locator service URL
         this.addressLocatorServiceURL.set('value', this.config.addressLocatorServiceURL);
 
+        // Setup the coordinates table
         var fields = [{
             name: 'label',
             title: this.nls.coordinateSystem,
             type: 'text',
-            unique: true,
+
+            unique: false,
             editable: false
         }, {
             name: 'wkid',
             title: this.nls.spatialReference,
             type: 'text',
-            unique: true,
+            unique: false,
             editable: false
         }];
         var args = {
@@ -134,17 +139,150 @@ define([
         this.CoordTable.placeAt(this.coordSystemsTable);
         this.CoordTable.startup();
 
+        // Load in coordinate systems
         if (this.config.coordinateSystems.length > 0) {
             var json = [];
             var len = this.config.coordinateSystems.length;
-            for (var i = 0; i < len; i++) {
+            for (var a = 0; a < len; a++) {
                 json.push({
-                    label: this.config.coordinateSystems[i].label,
-                    wkid: this.config.coordinateSystems[i].wkid
+                    label: this.config.coordinateSystems[a].label,
+                    wkid: this.config.coordinateSystems[a].wkid
                 });
             }
             this.CoordTable.addRows(json);
         }
+
+        // Setup map sheets table 1
+        var fields = [{
+            name: 'sheetID',
+            title: this.config.mapSheets1.name,
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'xmin',
+            title: "XMin",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'xmax',
+            title: "XMax",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'ymin',
+            title: "YMin",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'ymax',
+            title: "YMax",
+            type: 'text',
+            unique: false,
+            editable: false
+        }];
+        var args = {
+            fields: fields,
+            selectable: false
+        };
+        this.sheetsTable1 = new Table(args);
+        this.sheetsTable1.placeAt(this.mapSheetsTable1);
+        this.sheetsTable1.startup();
+
+        // Load in map sheets
+        if (this.config.nzMapSheets === true) {
+            var json = [];
+            var len = this.config.mapSheets1.mapSheets.length;
+            for (var b = 0; b < len; b++) {
+                json.push({
+                    sheetID: this.config.mapSheets1.mapSheets[b].sheetID,
+                    xmin: this.config.mapSheets1.mapSheets[b].xmin,
+                    xmax: this.config.mapSheets1.mapSheets[b].xmax,
+                    ymin: this.config.mapSheets1.mapSheets[b].ymin,
+                    ymax: this.config.mapSheets1.mapSheets[b].ymax
+                });
+            }
+            this.sheetsTable1.addRows(json);
+        }
+
+        // Setup map sheets table 2
+        var fields = [{
+            name: 'sheetID',
+            title: this.config.mapSheets2.name,
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'xmin',
+            title: "XMin",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'xmax',
+            title: "XMax",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'ymin',
+            title: "YMin",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'ymax',
+            title: "YMax",
+            type: 'text',
+            unique: false,
+            editable: false
+        }];
+        var args = {
+            fields: fields,
+            selectable: false
+        };
+        this.sheetsTable2 = new Table(args);
+        this.sheetsTable2.placeAt(this.mapSheetsTable2);
+        this.sheetsTable2.startup();
+
+        // Load in map sheets
+        if (this.config.nzMapSheets === true) {
+            var json = [];
+            var len = this.config.mapSheets2.mapSheets.length;
+            for (var c = 0; c < len; c++) {
+                json.push({
+                    sheetID: this.config.mapSheets2.mapSheets[c].sheetID,
+                    xmin: this.config.mapSheets2.mapSheets[c].xmin,
+                    xmax: this.config.mapSheets2.mapSheets[c].xmax,
+                    ymin: this.config.mapSheets2.mapSheets[c].ymin,
+                    ymax: this.config.mapSheets2.mapSheets[c].ymax
+                });
+            }
+            this.sheetsTable2.addRows(json);
+        }
+
+        // Set the map sheets checkbox
+        this.mapSheetsCheckbox.set("checked", this.config.nzMapSheets);
+        // EVENT FUNCTION - Checkbox change
+        on(this.mapSheetsCheckbox, "change", function (value) {
+            // If checked
+            if (value === true) {
+                // Show the map sheet tables
+                domStyle.set(mapFrame.mapSheetsTable1, "display", "block");
+                domStyle.set(mapFrame.mapSheetsTable2, "display", "block");
+            }
+            // If not checked
+            else {
+                // Show the map sheet tables
+                domStyle.set(mapFrame.mapSheetsTable1, "display", "none");
+                domStyle.set(mapFrame.mapSheetsTable2, "display", "none");
+            }
+        });
+
+
       },
 
       // FUNCTION - Get the configuration parameters from the configure widget and load into configuration file

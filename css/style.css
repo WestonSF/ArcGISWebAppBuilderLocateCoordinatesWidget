@@ -6,6 +6,10 @@
   font-size: 14px;
 }
 
+.jimu-widget-locatecoordinates .separator {
+  margin-top: 10px;
+}
+
 .jimu-widget-locatecoordinates .locatecoordinates-table > thead > tr > th,
 .jimu-widget-locatecoordinates .locatecoordinates-table > tbody > tr > td{
   height:40px;
@@ -13,23 +17,26 @@
   vertical-align:middle;
 }
 
-.jimu-widget-locatecoordinates .locatecoordinates-table > tbody > tr.example > td{
-  height:20px;
-  vertical-align:middle;
-}
-
 .jimu-widget-locatecoordinates .input-table > tbody > tr > .first{
   text-align: left;
   padding-right:15px;
-  min-width: 150px;
+  min-width: 100px;
 }
 
 .jimu-widget-locatecoordinates .input-table > tbody > tr > .second{
   width:50px;
 }
 
+.jimu-widget-locatecoordinates .helpMessage{
+  margin-top: 20px;
+  text-align: left;
+  font-style: italic;
+  font-size: 12px;
+}
+
 .jimu-widget-locatecoordinates .errorMessage{
   display: none;
+  margin-top: 10px;
   text-align: left;
   font-weight: bold;
   font-size: 12px;

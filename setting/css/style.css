@@ -8,12 +8,17 @@
   color: #596679;
 }
 
-.jimu-widget-locatecoordinates-setting .setting-table{
-  width: 100%;
+.jimu-widget-locatecoordinates-setting .separator{
+  margin-top:10px;
 }
 
-.jimu-widget-locatecoordinates-setting {
-  font-size: 14px;
+
+.jimu-widget-locatecoordinates-setting .rightSeparator {
+  padding-right:10px;
+}
+
+.jimu-widget-locatecoordinates-setting .setting-table{
+  width: 100%;
 }
 
 .jimu-widget-locatecoordinates-setting .setting-table > thead > tr > th,
@@ -32,7 +37,7 @@
   width:auto;
   text-align: left;
   padding-right:15px;
-  min-width: 150px;
+  min-width: 100px;
 }
 
 .jimu-widget-locatecoordinates-setting .input-table > tbody > tr > .second{

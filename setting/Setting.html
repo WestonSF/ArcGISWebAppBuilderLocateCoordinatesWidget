@@ -40,6 +40,12 @@
             </tr>
 	    </tbody>
     </table>
-    <br />
-    <div data-dojo-attach-point="coordSystemsTable"></div>
+    <div data-dojo-attach-point="coordSystemsTable"  class="separator"></div>
+
+    <div data-dojo-attach-point="mapSheetsCheck" class="separator">
+        <label class="rightSeparator" for="mapSheetsCheckbox">${nls.enableMapSheetsLabel}</label><input data-dojo-attach-point="mapSheetsCheckbox" data-dojo-type="dijit/form/CheckBox"/>
+    </div>
+
+    <div data-dojo-attach-point="mapSheetsTable1" class="separator"></div>
+    <div data-dojo-attach-point="mapSheetsTable2" class="separator"></div>
 </div>

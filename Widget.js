@@ -21,8 +21,10 @@ define([
     'dojo/_base/html',
     "dojo/on",
     "dojo/_base/lang",
+    "dojo/store/Memory",
     "dijit/_WidgetsInTemplateMixin",
     "dijit/ProgressBar",
+    "dijit/form/FilteringSelect",
     "jimu/BaseWidget",
     "jimu/utils",
     "jimu/SpatialReference/utils",
@@ -35,6 +37,7 @@ define([
     "esri/geometry/Point",
     "esri/tasks/GeometryService",
     "esri/SpatialReference",
+    "esri/geometry/Extent",
     "esri/tasks/ProjectParameters",
 	"esri/geometry/webMercatorUtils",
     "esri/InfoTemplate",
@@ -47,8 +50,10 @@ function (
     html,
     on,
     lang,
+    Memory,
     WidgetsInTemplateMixin,
     ProgressBar,
+    FilteringSelect,
     BaseWidget,
     utils,
     Spatialutils,
@@ -61,6 +66,7 @@ function (
     Point,
     GeometryService,
     SpatialReference,
+    Extent,
     ProjectParameters,
     webMercatorUtils,
     InfoTemplate,
@@ -70,6 +76,8 @@ function (
     return declare([BaseWidget, WidgetsInTemplateMixin], {
         baseClass: 'jimu-widget-locatecoordinates',
         tabContainer: null,
+        mapSheets1Data: [],
+        mapSheets2Data: [],
 
         // EVENT FUNCTION - Creation of widget
         postCreate: function () {
@@ -97,21 +105,44 @@ function (
 
             // Load in coordinates to selection
             var len = this.config.coordinateSystems.length;
-            for (var i = 0; i < len; i++) {
-                console.log();
+            for (var a = 0; a < len; a++) {
                 var option = {
-                    value: this.config.coordinateSystems[i].wkid,
-                    label: this.config.coordinateSystems[i].label
+                    value: this.config.coordinateSystems[a].wkid,
+                    label: this.config.coordinateSystems[a].label
                 };
                 this.coordSystemSelect.addOption(option);
+            }
+
+            // Load in map sheet labels
+            if (this.config.nzMapSheets === true) {
+                var option = {
+                    value: this.config.mapSheets1.name,
+                    label: this.config.mapSheets1.name
+                };
+                this.coordSystemSelect.addOption(option);
+
+                var option = {
+                    value: this.config.mapSheets2.name,
+                    label: this.config.mapSheets2.name
+                };
+                this.coordSystemSelect.addOption(option);
+
+                // Load the map sheet selection box
+                this.mapSheetSelection = new FilteringSelect({
+                    id: "sheetID",
+                    searchAttr: "sheetID",
+                    labelAttr: "sheetID"
+                });
+                this.mapSheetSelection.placeAt(this.mapSheetTextBox);
+                this.mapSheetSelection.startup();
+                // Load the map sheet selection data
+                mapSheets1Data = this.config.mapSheets1.mapSheets;
+                mapSheets2Data = this.config.mapSheets2.mapSheets;
             }
         },
 
         // EVENT FUNCTION - Startup widget
         startup: function () {
-            //this.xCoordTextBox.set('value', '1763677.09');
-            //this.yCoordTextBox.set('value', '5430247.99');
-
             console.log('Locate Coordinates widget started...');
             this.inherited(arguments);
 
@@ -152,24 +183,51 @@ function (
 
                 // If valid input
                 if ((xCoord) && (yCoord)) {
-                    // Show loading bar
-                    html.setStyle(mapFrame.progressBar.domNode, "display", "block");
+                    // If map sheet selected
+                    if ((mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets1.name) || (mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets2.name)) {
+                        // If valid input for map sheet
+                        if (mapFrame.mapSheetSelection.get('value')) {
+                            // Show loading bar
+                            html.setStyle(mapFrame.progressBar.domNode, "display", "block");
 
-                    // Close info window
-                    map.infoWindow.hide();
-                    // Clear existing graphics
-                    map.graphics.clear();
+                            // Close info window
+                            map.infoWindow.hide();
+                            // Clear existing graphics
+                            map.graphics.clear();
 
-                    // Project point to map if needed
-                    if (mapFrame.coordSystemSelect.value != map.spatialReference.wkid) {
-                        // Create new point
-                        var inputPoint = new Point([xCoord, yCoord], new SpatialReference({ wkid: this.coordSystemSelect.value }));
+                            console.log("Map sheet series selected - " + mapFrame.coordSystemSelect.value + "...");
 
-                        geometryService.project([inputPoint], map.spatialReference);
+                            goToMapSheet();
+                        }
+                        // Non valid input
+                        else {
+                            // Show error message
+                            domStyle.set(mapFrame.errorText, 'display', 'block');
+                            mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
+                        }
+
                     }
-                        // Coordinate system is same as map
+                    // If coordinate system selected
                     else {
-                        getPoint();
+                        // Show loading bar
+                        html.setStyle(mapFrame.progressBar.domNode, "display", "block");
+
+                        // Close info window
+                        map.infoWindow.hide();
+                        // Clear existing graphics
+                        map.graphics.clear();
+
+                        // Project point to map if needed
+                        if (mapFrame.coordSystemSelect.value != map.spatialReference.wkid) {
+                            // Create new point
+                            var inputPoint = new Point([xCoord, yCoord], new SpatialReference({ wkid: this.coordSystemSelect.value }));
+
+                            geometryService.project([inputPoint], map.spatialReference);
+                        }
+                        // Coordinate system is same as map
+                        else {
+                            getPoint();
+                        }
                     }
                 }
                 // Non valid input
@@ -218,7 +276,73 @@ function (
                 map.graphics.clear();
                 mapFrame.xCoordTextBox.set('value', '');
                 mapFrame.yCoordTextBox.set('value', '');
+                if (mapFrame.mapSheetSelection) {
+                    mapFrame.mapSheetSelection.set('value', '');
+                }
             }));
+
+            // FUNCTION - Go to map sheet
+            function goToMapSheet() {
+                // Get which map sheet series data
+                if (mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets2.name) {
+                    mapSeries = mapFrame.config.mapSheets2;
+                }
+                else {
+                    mapSeries = mapFrame.config.mapSheets1;
+                }
+                mapSheetSelected = mapFrame.mapSheetSelection._lastDisplayedValue;
+                xCoord = mapFrame.xCoordTextBox.get('value');
+                yCoord = mapFrame.yCoordTextBox.get('value');
+
+                // Get the coordinates for the map sheet
+                for (var mapSheet in mapSeries.mapSheets) {
+                    // For the selected map sheet
+                    if (mapSeries.mapSheets[mapSheet].sheetID == mapSheetSelected) {
+                        console.log("Map sheet selected - " + mapSeries.mapSheets[mapSheet].sheetID) + "...";
+                        // Coordinate boundaries for map sheet selected
+                        xmin = mapSeries.mapSheets[mapSheet].xmin;
+                        ymin = mapSeries.mapSheets[mapSheet].ymin;
+                        xmax = mapSeries.mapSheets[mapSheet].xmax;
+                        ymax = mapSeries.mapSheets[mapSheet].ymax;
+
+                        // Convert the grid coordinates
+                        xCoordConverted = xmin.substring(0, 2) + xCoord + "00"
+                        yCoordConverted = ymin.substring(0, 2) + yCoord + "00"
+
+                        // Validate coordinates
+                        if ((parseFloat(xCoordConverted) > parseFloat(xmin)) && (parseFloat(xCoordConverted) < parseFloat(xmax)) && (parseFloat(yCoordConverted) > parseFloat(ymin)) && (parseFloat(yCoordConverted) < parseFloat(ymax))) {
+                            point = new Point([xCoordConverted, yCoordConverted], new SpatialReference({ wkid: mapSeries.wkid }));
+
+                            // Project point to map if needed
+                            if (mapSeries.wkid != map.spatialReference.wkid) {
+                                // Project point
+                                geometryService.project([point], map.spatialReference);
+                            }
+                                // Coordinate system is same as map
+                            else {
+                                // If address locator provided
+                                if (locatorService) {
+                                    var params = new ProjectParameters();
+                                    params.geometries = [point];
+                                    // Locate addresses within specified metres
+                                    locatorService.locationToAddress(point, 100);
+                                }
+                                else {
+                                    goToPoint(point);
+                                }
+                            }
+                        }
+                        else {
+                            // Show error message
+                            domStyle.set(mapFrame.errorText, 'display', 'block');
+                            mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
+                        }
+                    }
+                }
+
+                // Hide loading bar
+                html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
+            }
 
             // FUNCTION - Go to the point
             function goToPoint(evt) {
@@ -256,22 +380,82 @@ function (
                     // If geographic
                     if (WKTCurrent.charAt(0) == 'G') {
                         // Update labels
-                        mapFrame.xCoordLabel.innerHTML = mapFrame.nls.geographicXLabel;
-                        mapFrame.yCoordLabel.innerHTML = mapFrame.nls.geographicYLabel;
+                        mapFrame.xCoordLabel.innerHTML = mapFrame.nls.geographicXLabel + ":";
+                        mapFrame.yCoordLabel.innerHTML = mapFrame.nls.geographicYLabel + ":";
                         // If projected
                     } else {
                         // Update labels
-                        mapFrame.xCoordLabel.innerHTML = mapFrame.nls.projectedXLabel;
-                        mapFrame.yCoordLabel.innerHTML = mapFrame.nls.projectedYLabel;
+                        mapFrame.xCoordLabel.innerHTML = mapFrame.nls.projectedXLabel + ":";
+                        mapFrame.yCoordLabel.innerHTML = mapFrame.nls.projectedYLabel + ":";
                     }
                 }
                 // Otherwise generic labels
                 else {
                     // Update labels
-                    mapFrame.xCoordLabel.innerHTML = "X";
-                    mapFrame.yCoordLabel.innerHTML = "Y";
+                    mapFrame.xCoordLabel.innerHTML = "X:";
+                    mapFrame.yCoordLabel.innerHTML = "Y:";
+                }
+                
+                if (mapFrame.coordSystemSelect.value == "2193") {
+                    mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageNZTM;
+                }
+                if (mapFrame.coordSystemSelect.value == "27200") {
+                    mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageNZMG;
+                }
+                if (mapFrame.coordSystemSelect.value == "4326") {
+                    mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageWGS84;
+                }
+                if (mapFrame.coordSystemSelect.value == "NZTopo 50 Sheet") {
+                    mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageNZTopo50Sheet;
+                }
+                if (mapFrame.coordSystemSelect.value == "NZMS 260 Sheet") {
+                    mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageNZMS260Sheet;
                 }
 
+
+                // If map sheet is selected
+                if ((mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets1.name) || (mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets2.name)) {
+                    if (mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets2.name) {
+                        // Load the map sheets into memory
+                        var mapSheetStore = new Memory({
+                            data: mapSheets2Data
+                        });
+                    }
+                    else {
+                        // Load the map sheets into memory
+                        var mapSheetStore = new Memory({
+                            data: mapSheets1Data
+                        });
+                    }
+                    mapFrame.mapSheetSelection.store = mapSheetStore;
+
+                    // Show map sheet selection
+                    domStyle.set(mapFrame.tableRow1, "display", "block");
+                    domStyle.set(mapFrame.tableRow2, "display", "block");
+                    domStyle.set(mapFrame.tableRow3, "display", "block");
+                    domStyle.set(mapFrame.tableRow4, "display", "block");
+
+                    // Set the constraints on input
+                    mapFrame.xCoordTextBox.constraints.max = 999;
+                    mapFrame.xCoordTextBox.constraints.min = 100;
+                    mapFrame.yCoordTextBox.constraints.max = 999;
+                    mapFrame.yCoordTextBox.constraints.min = 100;
+                }
+                else {
+                    // Hide map sheet selection
+                    domStyle.set(mapFrame.tableRow1, "display", "none");
+                    domStyle.set(mapFrame.tableRow2, "display", "block");
+                    domStyle.set(mapFrame.tableRow3, "display", "block");
+                    domStyle.set(mapFrame.tableRow4, "display", "block");
+
+                    // Set the constraints on input
+                    mapFrame.xCoordTextBox.constraints.max = 9999999;
+                    mapFrame.xCoordTextBox.constraints.min = -9999999;
+                    mapFrame.yCoordTextBox.constraints.max = 9999999;
+                    mapFrame.yCoordTextBox.constraints.min = -9999999;
+                    mapFrame.xCoordTextBox.constraints.pattern = '0.##########';
+                    mapFrame.yCoordTextBox.constraints.pattern = '0.##########';
+                }
             }
 
             // EVENT FUNCTION - Project error

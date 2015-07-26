@@ -4,7 +4,9 @@ define({
       addressLocatorServiceURL: "Address Locator Service URL",
       coordinateSystem: "Coordinate System",
       spatialReference: "Spatial Reference",
+      mapSheet: "Map Sheet",
       example: "Example",
-      ok: "OK"
+      ok: "OK",
+      enableMapSheetsLabel: "Show Map Sheets"
   })
 });
