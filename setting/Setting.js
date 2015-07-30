@@ -130,23 +130,52 @@ define([
             type: 'text',
             unique: false,
             editable: false
+        }, {
+            name: 'xmin',
+            title: "XMin",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'xmax',
+            title: "XMax",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'ymin',
+            title: "YMin",
+            type: 'text',
+            unique: false,
+            editable: false
+        }, {
+            name: 'ymax',
+            title: "YMax",
+            type: 'text',
+            unique: false,
+            editable: false
         }];
         var args = {
             fields: fields,
             selectable: false
         };
         this.CoordTable = new Table(args);
+        this.CoordTable.autoHeight = true;
         this.CoordTable.placeAt(this.coordSystemsTable);
         this.CoordTable.startup();
 
-        // Load in coordinate systems
+        // Load in coordinate systems and extents
         if (this.config.coordinateSystems.length > 0) {
             var json = [];
             var len = this.config.coordinateSystems.length;
             for (var a = 0; a < len; a++) {
                 json.push({
                     label: this.config.coordinateSystems[a].label,
-                    wkid: this.config.coordinateSystems[a].wkid
+                    wkid: this.config.coordinateSystems[a].wkid,
+                    xmin: this.config.coordinateSystems[a].xmin,
+                    xmax: this.config.coordinateSystems[a].xmax,
+                    ymin: this.config.coordinateSystems[a].ymin,
+                    ymax: this.config.coordinateSystems[a].ymax
                 });
             }
             this.CoordTable.addRows(json);
@@ -189,6 +218,7 @@ define([
             selectable: false
         };
         this.sheetsTable1 = new Table(args);
+        this.sheetsTable1.autoHeight = false;
         this.sheetsTable1.placeAt(this.mapSheetsTable1);
         this.sheetsTable1.startup();
 
@@ -245,6 +275,7 @@ define([
             selectable: false
         };
         this.sheetsTable2 = new Table(args);
+        this.sheetsTable2.autoHeight = false;
         this.sheetsTable2.placeAt(this.mapSheetsTable2);
         this.sheetsTable2.startup();
 

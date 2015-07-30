@@ -12,7 +12,6 @@
   margin-top:10px;
 }
 
-
 .jimu-widget-locatecoordinates-setting .rightSeparator {
   padding-right:10px;
 }
@@ -52,3 +51,7 @@
   display: inline-block;
 }
 
+/* Height of tables with auto height off */
+.jimu-widget-locatecoordinates-setting .jimu-simple-table {
+    height:240px;
+}

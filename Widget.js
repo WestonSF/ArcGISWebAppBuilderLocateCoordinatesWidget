@@ -78,6 +78,10 @@ function (
         tabContainer: null,
         mapSheets1Data: [],
         mapSheets2Data: [],
+        coordinateXmin: null,
+        coordinateXmax: null,
+        coordinateYmin: null,
+        coordinateYmax: null,
 
         // EVENT FUNCTION - Creation of widget
         postCreate: function () {
@@ -152,7 +156,6 @@ function (
             // Get configurations
             // Get geometry service URL from settings
             var geometryService = new GeometryService(this.config.geometryServiceURL);
-            var geometryLocatorService = new GeometryService(this.config.geometryServiceURL);
             // Get address locator URL from settings
             var locatorService = new Locator(this.config.addressLocatorServiceURL);          
             locatorService.outSpatialReference = map.spatialReference;
@@ -181,34 +184,34 @@ function (
                 xCoord = mapFrame.xCoordTextBox.get('value');
                 yCoord = mapFrame.yCoordTextBox.get('value');
 
-                // If valid input
-                if ((xCoord) && (yCoord)) {
-                    // If map sheet selected
-                    if ((mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets1.name) || (mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets2.name)) {
-                        // If valid input for map sheet
-                        if (mapFrame.mapSheetSelection.get('value')) {
-                            // Show loading bar
-                            html.setStyle(mapFrame.progressBar.domNode, "display", "block");
+                // If map sheet selected
+                if ((mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets1.name) || (mapFrame.coordSystemSelect.value == mapFrame.config.mapSheets2.name)) {
+                    // If valid input for map sheet
+                    if (mapFrame.mapSheetSelection.get('value')) {
+                        // Show loading bar
+                        html.setStyle(mapFrame.progressBar.domNode, "display", "block");
 
-                            // Close info window
-                            map.infoWindow.hide();
-                            // Clear existing graphics
-                            map.graphics.clear();
+                        // Close info window
+                        map.infoWindow.hide();
+                        // Clear existing graphics
+                        map.graphics.clear();
 
-                            console.log("Map sheet series selected - " + mapFrame.coordSystemSelect.value + "...");
+                        console.log("Map sheet series selected - " + mapFrame.coordSystemSelect.value + "...");
 
-                            goToMapSheet();
-                        }
-                        // Non valid input
-                        else {
-                            // Show error message
-                            domStyle.set(mapFrame.errorText, 'display', 'block');
-                            mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
-                        }
-
+                        goToMapSheet();
                     }
-                    // If coordinate system selected
+                        // Non valid input
                     else {
+                        // Show error message
+                        domStyle.set(mapFrame.errorText, 'display', 'block');
+                        mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
+                    }
+
+                }
+                // Otherwise coordinate system selected
+                else {
+                    // If valid input
+                    if ((parseFloat(xCoord) > parseFloat(coordinateXmin)) && (parseFloat(xCoord) < parseFloat(coordinateXmax)) && (parseFloat(yCoord) > parseFloat(coordinateYmin)) && (parseFloat(yCoord) < parseFloat(coordinateYmax))) {
                         // Show loading bar
                         html.setStyle(mapFrame.progressBar.domNode, "display", "block");
 
@@ -224,17 +227,18 @@ function (
 
                             geometryService.project([inputPoint], map.spatialReference);
                         }
-                        // Coordinate system is same as map
+                            // Coordinate system is same as map
                         else {
                             getPoint();
                         }
+
                     }
-                }
-                // Non valid input
-                else {
-                    // Show error message
-                    domStyle.set(mapFrame.errorText, 'display', 'block');
-                    mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
+                    // Non valid input
+                    else {
+                        // Show error message
+                        domStyle.set(mapFrame.errorText, 'display', 'block');
+                        mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
+                    }
                 }
             }));
 
@@ -405,6 +409,9 @@ function (
                 if (mapFrame.coordSystemSelect.value == "4326") {
                     mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageWGS84;
                 }
+                if (mapFrame.coordSystemSelect.value == "3857") {
+                    mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageWGS84Web;
+                }
                 if (mapFrame.coordSystemSelect.value == "NZTopo 50 Sheet") {
                     mapFrame.helpText.innerHTML = mapFrame.nls.helpMessageNZTopo50Sheet;
                 }
@@ -441,32 +448,38 @@ function (
                     mapFrame.yCoordTextBox.constraints.max = 999;
                     mapFrame.yCoordTextBox.constraints.min = 100;
                 }
+                // Coordinate system selected
                 else {
-                    // Hide map sheet selection
-                    domStyle.set(mapFrame.tableRow1, "display", "none");
-                    domStyle.set(mapFrame.tableRow2, "display", "block");
-                    domStyle.set(mapFrame.tableRow3, "display", "block");
-                    domStyle.set(mapFrame.tableRow4, "display", "block");
+                    // Get the valid extent for the coordinate system selected
+                    for (var coordinateSystem in mapFrame.config.coordinateSystems) {
+                        // For the selected map sheet
+                        if (mapFrame.config.coordinateSystems[coordinateSystem].wkid == mapFrame.coordSystemSelect.value) {
+                            // Set the valid extents
+                            coordinateXmin = mapFrame.config.coordinateSystems[coordinateSystem].xmin;
+                            coordinateYmin = mapFrame.config.coordinateSystems[coordinateSystem].ymin;
+                            coordinateXmax = mapFrame.config.coordinateSystems[coordinateSystem].xmax;
+                            coordinateYmax = mapFrame.config.coordinateSystems[coordinateSystem].ymax;
 
-                    // Set the constraints on input
-                    mapFrame.xCoordTextBox.constraints.max = 9999999;
-                    mapFrame.xCoordTextBox.constraints.min = -9999999;
-                    mapFrame.yCoordTextBox.constraints.max = 9999999;
-                    mapFrame.yCoordTextBox.constraints.min = -9999999;
-                    mapFrame.xCoordTextBox.constraints.pattern = '0.##########';
-                    mapFrame.yCoordTextBox.constraints.pattern = '0.##########';
+                            // Hide map sheet selection
+                            domStyle.set(mapFrame.tableRow1, "display", "none");
+                            domStyle.set(mapFrame.tableRow2, "display", "block");
+                            domStyle.set(mapFrame.tableRow3, "display", "block");
+                            domStyle.set(mapFrame.tableRow4, "display", "block");
+
+                            // Set the constraints on input
+                            mapFrame.xCoordTextBox.constraints.max = coordinateXmax;
+                            mapFrame.xCoordTextBox.constraints.min = coordinateXmin;
+                            mapFrame.yCoordTextBox.constraints.max = coordinateYmax;
+                            mapFrame.yCoordTextBox.constraints.min = coordinateYmin;
+                            mapFrame.xCoordTextBox.constraints.pattern = '0.##########';
+                            mapFrame.yCoordTextBox.constraints.pattern = '0.##########';
+                        }
+                    }
                 }
             }
 
             // EVENT FUNCTION - Project error
             geometryService.on("error", function (evt) {
-                // Show error message
-                domStyle.set(mapFrame.errorText, 'display', 'block');
-                mapFrame.errorText.innerHTML = evt.error.message;
-                // Hide loading bar
-                html.setStyle(mapFrame.progressBar.domNode, 'display', 'none');
-            });
-            geometryLocatorService.on("error", function (evt) {
                 // Show error message
                 domStyle.set(mapFrame.errorText, 'display', 'block');
                 mapFrame.errorText.innerHTML = evt.error.message;

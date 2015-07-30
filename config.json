@@ -2,9 +2,39 @@
 	"geometryServiceURL":"http://services.arcgisonline.co.nz/arcgis/rest/services/Utilities/Geometry/GeometryServer",
 	"addressLocatorServiceURL":"http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer",
     "coordinateSystems": [
-      {"label":"NZTM", "wkid":"2193"},
-      {"label":"NZMG", "wkid":"27200"},
-      {"label":"WGS84", "wkid":"4326"}
+      {
+		"label":"NZTM", 
+		"wkid":"2193",
+		"xmin":"733408", 
+		"xmax":"2738953", 
+		"ymin":"4039556", 
+		"ymax":"6463144"
+	  },
+      {
+		"label":"NZMG", 
+		"wkid":"27200",
+		"xmin":"1642276", 
+		"xmax":"3655220", 
+		"ymin":"4602531", 
+		"ymax":"7036538"
+
+	  },
+      {
+		"label":"WGS84", 
+		"wkid":"4326",
+		"xmin":"-180", 
+		"xmax":"180", 
+		"ymin":"-53", 
+		"ymax":"-31"
+	  },
+      {
+		"label":"WGS84 Web Mercator", 
+		"wkid":"3857",
+		"xmin":"-20037507", 
+		"xmax":"20037507", 
+		"ymin":"-6998270", 
+		"ymax":"-3685409"
+	  }
     ],
 	"nzMapSheets": true,
 	"mapSheets1": {
