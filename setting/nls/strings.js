@@ -7,6 +7,8 @@ define({
       mapSheet: "Map Sheet",
       example: "Example",
       ok: "OK",
-      enableMapSheetsLabel: "Show Map Sheets"
+      cancel: "Cancel",
+      enableMapSheetsLabel: "Show Map Sheets",
+      addCoordinateLabel: "Add Coordinate System"
   })
 });

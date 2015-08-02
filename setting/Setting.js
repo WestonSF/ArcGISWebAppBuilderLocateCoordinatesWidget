@@ -28,6 +28,7 @@ define([
     "jimu/BaseWidgetSetting",
     "jimu/dijit/SimpleTable",
     "jimu/SpatialReference/srUtils",
+    './Edit',
     "esri/request"
   ],
   function(
@@ -44,6 +45,7 @@ define([
     BaseWidgetSetting,
     Table,
     utils,
+    Edit,
     esriRequest    
     ) {
     return declare([BaseWidgetSetting, WidgetsInTemplateMixin], {
@@ -107,7 +109,6 @@ define([
       // FUNCTION - Set the default configuration parameters in the configure widget from the config file
       setConfig: function (config) {
         var mapFrame = this;
-
         this.config = config;
 
         // Set the geometry service URL
@@ -154,7 +155,15 @@ define([
             type: 'text',
             unique: false,
             editable: false
-        }];
+        },
+        {
+            name: '',
+            title: '',
+            width: '100px',
+            type: 'actions',
+            actions: ['up', 'down', 'delete']
+        }
+        ];
         var args = {
             fields: fields,
             selectable: false
@@ -181,139 +190,191 @@ define([
             this.CoordTable.addRows(json);
         }
 
-        // Setup map sheets table 1
-        var fields = [{
-            name: 'sheetID',
-            title: this.config.mapSheets1.name,
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'xmin',
-            title: "XMin",
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'xmax',
-            title: "XMax",
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'ymin',
-            title: "YMin",
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'ymax',
-            title: "YMax",
-            type: 'text',
-            unique: false,
-            editable: false
-        }];
-        var args = {
-            fields: fields,
-            selectable: false
-        };
-        this.sheetsTable1 = new Table(args);
-        this.sheetsTable1.autoHeight = false;
-        this.sheetsTable1.placeAt(this.mapSheetsTable1);
-        this.sheetsTable1.startup();
-
-        // Load in map sheets
-        if (this.config.nzMapSheets === true) {
-            var json = [];
-            var len = this.config.mapSheets1.mapSheets.length;
-            for (var b = 0; b < len; b++) {
-                json.push({
-                    sheetID: this.config.mapSheets1.mapSheets[b].sheetID,
-                    xmin: this.config.mapSheets1.mapSheets[b].xmin,
-                    xmax: this.config.mapSheets1.mapSheets[b].xmax,
-                    ymin: this.config.mapSheets1.mapSheets[b].ymin,
-                    ymax: this.config.mapSheets1.mapSheets[b].ymax
-                });
-            }
-            this.sheetsTable1.addRows(json);
-        }
-
-        // Setup map sheets table 2
-        var fields = [{
-            name: 'sheetID',
-            title: this.config.mapSheets2.name,
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'xmin',
-            title: "XMin",
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'xmax',
-            title: "XMax",
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'ymin',
-            title: "YMin",
-            type: 'text',
-            unique: false,
-            editable: false
-        }, {
-            name: 'ymax',
-            title: "YMax",
-            type: 'text',
-            unique: false,
-            editable: false
-        }];
-        var args = {
-            fields: fields,
-            selectable: false
-        };
-        this.sheetsTable2 = new Table(args);
-        this.sheetsTable2.autoHeight = false;
-        this.sheetsTable2.placeAt(this.mapSheetsTable2);
-        this.sheetsTable2.startup();
-
-        // Load in map sheets
-        if (this.config.nzMapSheets === true) {
-            var json = [];
-            var len = this.config.mapSheets2.mapSheets.length;
-            for (var c = 0; c < len; c++) {
-                json.push({
-                    sheetID: this.config.mapSheets2.mapSheets[c].sheetID,
-                    xmin: this.config.mapSheets2.mapSheets[c].xmin,
-                    xmax: this.config.mapSheets2.mapSheets[c].xmax,
-                    ymin: this.config.mapSheets2.mapSheets[c].ymin,
-                    ymax: this.config.mapSheets2.mapSheets[c].ymax
-                });
-            }
-            this.sheetsTable2.addRows(json);
-        }
-
-        // Set the map sheets checkbox
+          // Set the default map sheets checkbox
         this.mapSheetsCheckbox.set("checked", this.config.nzMapSheets);
-        // EVENT FUNCTION - Checkbox change
-        on(this.mapSheetsCheckbox, "change", function (value) {
-            // If checked
-            if (value === true) {
-                // Show the map sheet tables
-                domStyle.set(mapFrame.mapSheetsTable1, "display", "block");
-                domStyle.set(mapFrame.mapSheetsTable2, "display", "block");
+
+        // EVENT - Checkbox change
+        on(this.mapSheetsCheckbox, "change", setMapSheets);
+
+        // FUNCTION - Setup the map sheets
+        function setMapSheets() {
+            if (mapFrame.mapSheetsCheckbox.checked === true) {
+                // If tables already created
+                if ((mapFrame.sheetsTable1) && (mapFrame.sheetsTable1)) {
+                    // Show the map sheet tables
+                    domStyle.set(mapFrame.mapSheetsTable1, "display", "block");
+                    domStyle.set(mapFrame.mapSheetsTable2, "display", "block");
+                // Otherwise create the tables
+                }
+                else {
+                    // Setup map sheets table 1
+                    var fields = [{
+                        name: 'sheetID',
+                        title: mapFrame.config.mapSheets1.name,
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'xmin',
+                        title: "XMin",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'xmax',
+                        title: "XMax",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'ymin',
+                        title: "YMin",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'ymax',
+                        title: "YMax",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    },
+                    {
+                        name: '',
+                        title: '',
+                        width: '100px',
+                        type: 'actions',
+                        actions: ['up', 'down', 'delete']
+                    }
+                    ];
+                    var args = {
+                        fields: fields,
+                        selectable: false
+                    };
+                    mapFrame.sheetsTable1 = new Table(args);
+                    mapFrame.sheetsTable1.autoHeight = false;
+                    mapFrame.sheetsTable1.placeAt(mapFrame.mapSheetsTable1);
+                    mapFrame.sheetsTable1.startup();
+
+                    // Load in map sheets
+                    var json = [];
+                    var len = mapFrame.config.mapSheets1.mapSheets.length;
+                    for (var b = 0; b < len; b++) {
+                        json.push({
+                            sheetID: mapFrame.config.mapSheets1.mapSheets[b].sheetID,
+                            xmin: mapFrame.config.mapSheets1.mapSheets[b].xmin,
+                            xmax: mapFrame.config.mapSheets1.mapSheets[b].xmax,
+                            ymin: mapFrame.config.mapSheets1.mapSheets[b].ymin,
+                            ymax: mapFrame.config.mapSheets1.mapSheets[b].ymax
+                        });
+                    }
+                    mapFrame.sheetsTable1.addRows(json);
+
+                    // Setup map sheets table 2
+                    var fields = [{
+                        name: 'sheetID',
+                        title: mapFrame.config.mapSheets2.name,
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'xmin',
+                        title: "XMin",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'xmax',
+                        title: "XMax",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'ymin',
+                        title: "YMin",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    }, {
+                        name: 'ymax',
+                        title: "YMax",
+                        type: 'text',
+                        unique: false,
+                        editable: false
+                    },
+                    {
+                        name: '',
+                        title: '',
+                        width: '100px',
+                        type: 'actions',
+                        actions: ['up', 'down', 'delete']
+                    }
+                    ];
+                    var args = {
+                        fields: fields,
+                        selectable: false
+                    };
+                    mapFrame.sheetsTable2 = new Table(args);
+                    mapFrame.sheetsTable2.autoHeight = false;
+                    mapFrame.sheetsTable2.placeAt(mapFrame.mapSheetsTable2);
+                    mapFrame.sheetsTable2.startup();
+
+                    // Load in map sheets
+                    var json = [];
+                    var len = mapFrame.config.mapSheets2.mapSheets.length;
+                    for (var c = 0; c < len; c++) {
+                        json.push({
+                            sheetID: mapFrame.config.mapSheets2.mapSheets[c].sheetID,
+                            xmin: mapFrame.config.mapSheets2.mapSheets[c].xmin,
+                            xmax: mapFrame.config.mapSheets2.mapSheets[c].xmax,
+                            ymin: mapFrame.config.mapSheets2.mapSheets[c].ymin,
+                            ymax: mapFrame.config.mapSheets2.mapSheets[c].ymax
+                        });
+                    }
+                    mapFrame.sheetsTable2.addRows(json);
+                }
             }
             // If not checked
             else {
-                // Show the map sheet tables
+                // Don't show the map sheet tables
                 domStyle.set(mapFrame.mapSheetsTable1, "display", "none");
                 domStyle.set(mapFrame.mapSheetsTable2, "display", "none");
             }
-        });
+        }
+      },
 
+      // EVENT FUNCTION - Add coordinate system
+      onAddCoordinateSystemClick: function () {
+          this.popupState = "ADD";
+          this.openEditCoordinateSystem(this.nls.addCoordinateLabel, {});
+      },
 
+      // EVENT FUNCTION - Edit coordinate system
+      openEditCoordinateSystem: function (title) {
+          this.edit = new Edit({
+              nls: this.nls
+          });
+
+          this.popup = new Popup({
+              titleLabel: title,
+              autoHeight: true,
+              content: this.edit,
+              container: 'main-page',
+              width: 640,
+              height: 300,
+              buttons: [{
+                  label: this.nls.ok,
+                  key: keys.ENTER,
+                  disable: true,
+                  onClick: lang.hitch(this, '_onEditOk')
+              }, {
+                  label: this.nls.cancel,
+                  key: keys.ESCAPE
+              }],
+              onClose: lang.hitch(this, '_onEditClose')
+          });
+          html.addClass(this.popup.domNode, 'widget-setting-popup');
+          this.edit.startup();
       },
 
       // FUNCTION - Get the configuration parameters from the configure widget and load into configuration file
@@ -331,6 +392,25 @@ define([
             json.push(data[i]);
         }
         this.config.coordinateSystems = json;
+
+        // Get the map sheets checkbox
+        this.config.nzMapSheets = this.mapSheetsCheckbox.checked;
+
+        // Get the map sheets
+        var data = this.sheetsTable1.getData();
+        var json = [];
+        var len = data.length;
+        for (var a = 0; a < len; a++) {
+            json.push(data[a]);
+        }
+        this.config.mapSheets1.mapSheets = json;
+        var data = this.sheetsTable2.getData();
+        var json = [];
+        var len = data.length;
+        for (var b = 0; b < len; b++) {
+            json.push(data[b]);
+        }
+        this.config.mapSheets2.mapSheets = json;
 
         // Return the configuration parameters
 		return this.config;

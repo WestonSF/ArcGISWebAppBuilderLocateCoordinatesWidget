@@ -153,6 +153,10 @@ function (
             var mapFrame = this;
             var map = this.map;
 
+            // Test data
+            //mapFrame.xCoordTextBox.set('value', '2673629.6');
+            //mapFrame.yCoordTextBox.set('value', '5991912.2');
+
             // Get configurations
             // Get geometry service URL from settings
             var geometryService = new GeometryService(this.config.geometryServiceURL);
@@ -206,7 +210,6 @@ function (
                         domStyle.set(mapFrame.errorText, 'display', 'block');
                         mapFrame.errorText.innerHTML = mapFrame.nls.errorMessageCoordinates;
                     }
-
                 }
                 // Otherwise coordinate system selected
                 else {
