@@ -28,7 +28,6 @@ define([
     "jimu/BaseWidgetSetting",
     "jimu/dijit/SimpleTable",
     "jimu/SpatialReference/srUtils",
-    './Edit',
     "esri/request"
   ],
   function(
@@ -45,7 +44,6 @@ define([
     BaseWidgetSetting,
     Table,
     utils,
-    Edit,
     esriRequest    
     ) {
     return declare([BaseWidgetSetting, WidgetsInTemplateMixin], {
@@ -341,40 +339,6 @@ define([
                 domStyle.set(mapFrame.mapSheetsTable2, "display", "none");
             }
         }
-      },
-
-      // EVENT FUNCTION - Add coordinate system
-      onAddCoordinateSystemClick: function () {
-          this.popupState = "ADD";
-          this.openEditCoordinateSystem(this.nls.addCoordinateLabel, {});
-      },
-
-      // EVENT FUNCTION - Edit coordinate system
-      openEditCoordinateSystem: function (title) {
-          this.edit = new Edit({
-              nls: this.nls
-          });
-
-          this.popup = new Popup({
-              titleLabel: title,
-              autoHeight: true,
-              content: this.edit,
-              container: 'main-page',
-              width: 640,
-              height: 300,
-              buttons: [{
-                  label: this.nls.ok,
-                  key: keys.ENTER,
-                  disable: true,
-                  onClick: lang.hitch(this, '_onEditOk')
-              }, {
-                  label: this.nls.cancel,
-                  key: keys.ESCAPE
-              }],
-              onClose: lang.hitch(this, '_onEditClose')
-          });
-          html.addClass(this.popup.domNode, 'widget-setting-popup');
-          this.edit.startup();
       },
 
       // FUNCTION - Get the configuration parameters from the configure widget and load into configuration file
