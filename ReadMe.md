@@ -1,13 +1,14 @@
 # Locate Coordinates Widget for ArcGIS Web AppBuilder
 
-
-[Demo](http://)
+Locates an XY coordinate point on a map using a list of configurable coordinate systems. Finds the closest address or feature and displays in popup.
 
 
 ## Features
 
-* Locate a point - Projects from different coordinate systems
-* Reverse geocode to closest address
+* Locates an XY coordinate point on a map - Projects from different coordinate systems.
+* Configure with different coordinate systems.
+* Locates New Zealand map sheet references on a map.
+* Reverse geocode to closest address, displaying in popup.
 
 
 ## Requirements
@@ -19,7 +20,6 @@
 ## Installation Instructions
 
 * Fork and then clone the repo or download the .zip file. 
-* Run and try the examples.
 
 
 ## Resources
@@ -44,6 +44,7 @@ Anyone and everyone is welcome to contribute.
 
 
 ## Licensing
+
 Copyright 2015 - Shaun Weston
 
 Licensed under the Apache License, Version 2.0 (the "License");
