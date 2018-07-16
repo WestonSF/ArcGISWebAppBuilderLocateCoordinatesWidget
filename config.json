@@ -1,6 +1,6 @@
 {
-	"geometryServiceURL":"http://services.arcgisonline.co.nz/arcgis/rest/services/Utilities/Geometry/GeometryServer",
-	"addressLocatorServiceURL":"http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer",
+	"geometryServiceURL":"https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer",
+	"addressLocatorServiceURL":"https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer",
     "coordinateSystems": [
       {
 		"label":"NZTM", 

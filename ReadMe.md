@@ -2,7 +2,7 @@
 
 Locates an XY coordinate point on a map using a list of configurable coordinate systems. Finds the closest address or feature and displays in popup.
 
-[Demo](http://ec2-52-64-20-102.ap-southeast-2.compute.amazonaws.com/apps/LocateCoordinatesWidget)
+[Demo](https://ec2-52-64-20-102.ap-southeast-2.compute.amazonaws.com/apps/LocateCoordinatesWidget)
 
 
 ## Features
